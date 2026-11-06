@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#05080d" />
+  <meta name="description" content="Canon EOS R8 与 RF 28-70mm F2.8 IS STM 交互式三维拆解可视化实验室。" />
+  <title>CANON EOS R8 — Interactive Teardown Lab</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="boot" id="boot" aria-hidden="true">
+    <div class="boot-inner">
+      <div class="boot-mark"><span></span><i></i></div>
+      <p class="boot-kicker">CANON OPTICAL SYSTEMS</p>
+      <h2>EOS R8 <em>/</em> TEARDOWN</h2>
+      <div class="boot-bar"><i id="bootBar"></i></div>
+      <div class="boot-meta"><span id="bootStatus">CALIBRATING OPTICAL AXIS</span><span>24.2 MP · FULL FRAME</span></div>
+    </div>
+    <div class="boot-grid"></div>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-symbol" aria-hidden="true"><span></span><i></i></div>
+        <div class="brand-copy">
+          <p class="overline">CANON INTERACTIVE LAB <span>·</span> STRUCTURAL VISUALIZATION</p>
+          <div class="brand-title">
+            <h1>EOS R8</h1>
+            <span class="brand-slash">/</span>
+            <span class="brand-sub">TEARDOWN</span>
+            <span class="brand-version">LAB 01</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-metrics" aria-label="核心参数">
+        <div class="metric">
+          <span>RESOLUTION</span>
+          <strong>24.2<small>MP</small></strong>
+        </div>
+        <div class="metric">
+          <span>PROCESSOR</span>
+          <strong>DIGIC<small>X</small></strong>
+        </div>
+        <div class="metric">
+          <span>LENS</span>
+          <strong>28–70<small>F2.8</small></strong>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="guideBtn" type="button">
+          <span>操作指南</span><kbd>?</kbd>
+        </button>
+        <div class="live">
+          <span class="live-dot"></span>
+          <div><b>LAB ONLINE</b><small>WEBGL / REALTIME</small></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel panel-left" id="leftPanel" aria-label="部件清单">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">COMPONENT INDEX</p>
+            <h2>部件清单</h2>
+          </div>
+          <div class="panel-count"><strong id="partCount">17</strong><span>MODULES</span></div>
+          <button class="drawer-close" type="button" data-close-drawer aria-label="关闭部件清单">×</button>
+        </div>
+
+        <div class="filter-row" role="group" aria-label="部件筛选">
+          <button class="filter is-active" data-filter="all" type="button">全部</button>
+          <button class="filter" data-filter="body" type="button">机身</button>
+          <button class="filter" data-filter="lens" type="button">镜头</button>
+        </div>
+
+        <div class="part-list" id="partList"></div>
+
+        <div class="panel-foot">
+          <div class="legend">
+            <span><i class="dot dot-red"></i>光学 / OPTICAL</span>
+            <span><i class="dot dot-cyan"></i>电子 / ELECTRONIC</span>
+            <span><i class="dot dot-amber"></i>机械 / MECHANICAL</span>
+          </div>
+          <p class="serial">SYS. R8-2420 / RF.2870</p>
+        </div>
+      </aside>
+
+      <section class="stage-wrap" id="stageWrap" aria-label="三维拆解视图">
+        <div class="stage-toolbar">
+          <div class="view-status">
+            <span class="eyebrow">TEARDOWN SEQUENCE</span>
+            <div><i class="status-line"></i><strong id="viewState">整机锁定</strong><span id="explodePercent">00%</span></div>
+          </div>
+
+          <div class="stage-controls" role="toolbar" aria-label="视图控制">
+            <div class="segmented" aria-label="拆解状态">
+              <button class="seg is-active" data-action="collapse" type="button" title="收起全部部件 (Space)">
+                <span class="seg-icon icon-stack"></span>整机
+              </button>
+              <button class="seg" data-action="explode" type="button" title="拆解全部部件 (Space)">
+                <span class="seg-icon icon-explode"></span>全拆解
+              </button>
+            </div>
+            <button class="stage-btn" data-action="rotate" type="button" title="自动旋转 (A)">
+              <span class="btn-glyph">↻</span><span>自转</span>
+            </button>
+            <button class="stage-btn is-on" data-action="labels" type="button" title="显示/隐藏标注 (L)">
+              <span class="btn-glyph">⌖</span><span>标注</span>
+            </button>
+            <button class="stage-btn icon-only" data-action="reset" type="button" title="重置视角 (R)" aria-label="重置视角">⌂</button>
+            <button class="stage-btn mobile-only" data-action="parts" type="button" title="打开部件清单"><span class="btn-glyph">☰</span><span>清单</span></button>
+            <button class="stage-btn mobile-only" data-action="details" type="button" title="打开部件详情"><span class="btn-glyph">◫</span><span>详情</span></button>
+          </div>
+
+          <div class="explode-meter" aria-hidden="true">
+            <span>DISASSEMBLY</span>
+            <div><i id="meterFill"></i></div>
+          </div>
+        </div>
+
+        <div id="stage" class="stage"></div>
+        <div class="stage-grid" aria-hidden="true"></div>
+        <div class="scanlines" aria-hidden="true"></div>
+        <svg class="leader-layer" id="leaderLayer" aria-hidden="true"></svg>
+        <div class="annotation-layer" id="annotationLayer" aria-hidden="true"></div>
+        <div class="reticle" id="reticle" aria-hidden="true">
+          <span class="reticle-ring"></span>
+          <i></i>
+          <b>SELECTED</b>
+        </div>
+
+        <div class="corner corner-tl" aria-hidden="true"></div>
+        <div class="corner corner-tr" aria-hidden="true"></div>
+        <div class="corner corner-bl" aria-hidden="true"></div>
+        <div class="corner corner-br" aria-hidden="true"></div>
+
+        <div class="zoom-cluster">
+          <button type="button" data-zoom="in" aria-label="放大">+</button>
+          <span>ZOOM</span>
+          <button type="button" data-zoom="out" aria-label="缩小">−</button>
+        </div>
+
+        <div class="axis-badge">
+          <span>Y</span><i></i><span>X</span><small>ORBIT / 360°</small>
+        </div>
+
+        <div class="coach" id="coach">
+          <button class="coach-close" id="coachClose" type="button" aria-label="关闭引导">×</button>
+          <p class="coach-kicker"><i></i> QUICK START</p>
+          <h3>从机身外壳开始</h3>
+          <p>点击任意部件，触发独立拆解动画。左侧清单可直接定位隐藏组件。</p>
+          <div class="coach-steps">
+            <span><b>01</b> 点击拆解</span>
+            <span><b>02</b> 拖拽旋转</span>
+            <span><b>03</b> 滚轮缩放</span>
+          </div>
+        </div>
+
+        <div class="stage-bottom">
+          <div class="hint-bar">
+            <span class="mouse-icon"><i></i></span>
+            <span>拖动旋转</span><b>·</b><span>滚轮缩放</span><b>·</b><span>右键平移</span><b>·</b><span class="accent">点击部件拆解</span>
+          </div>
+          <div class="selected-strip" id="selectedStrip">
+            <span class="strip-index">00</span>
+            <span class="strip-name">待选择部件</span>
+            <span class="strip-spec">READY</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel panel-right" id="rightPanel" aria-label="部件详情">
+        <div class="panel-head right-head">
+          <div>
+            <p class="panel-kicker">COMPONENT DATA</p>
+            <h2>部件详情</h2>
+          </div>
+          <span class="detail-index" id="detailIndex">00 / 17</span>
+          <button class="drawer-close" type="button" data-close-drawer aria-label="关闭部件详情">×</button>
+        </div>
+
+        <div class="detail-scroll" id="detailScroll">
+          <div id="detailContent" class="detail-content"></div>
+        </div>
+
+        <div class="system-strip">
+          <div><span>SYSTEM</span><strong>FULL FRAME</strong></div>
+          <div><span>MOUNT</span><strong>RF 54mm</strong></div>
+          <div><span>MASS</span><strong>461 g</strong></div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="drawer-scrim" id="drawerScrim" aria-hidden="true"></div>
+
+    <footer class="footer">
+      <div><span>© 2026 CONCEPT VISUALIZATION</span><b>·</b><span>NOT AFFILIATED WITH CANON INC.</span></div>
+      <div class="ticker"><span>RF 28–70mm F2.8 IS STM</span><b>•</b><span>15 ELEMENTS / 12 GROUPS</span><b>•</b><span>5.5-STOP OPTICAL IS</span><b>•</b><span>9-BLADE APERTURE</span></div>
+      <div><span>BUILD 01.08</span><b>·</b><span>THREE.JS / NO MODEL FILES</span></div>
+    </footer>
+  </div>
+
+  <div class="modal" id="guideModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <button class="modal-close" type="button" data-close-modal aria-label="关闭">×</button>
+      <p class="panel-kicker">OPERATION MANUAL / 01</p>
+      <h2 id="guideTitle">交互拆解指南</h2>
+      <p class="modal-lead">这不是一段动画，而是一台可以拆开的结构模型。所有部件、材质与标注均由代码实时生成。</p>
+
+      <div class="guide-grid">
+        <article>
+          <span class="guide-no">01</span>
+          <div class="guide-icon">◎</div>
+          <h3>点击拆解</h3>
+          <p>点击模型或左侧清单中的部件，部件会沿预设轴向移出并高亮。再次点击其他部件可继续拆解。</p>
+        </article>
+        <article>
+          <span class="guide-no">02</span>
+          <div class="guide-icon">↻</div>
+          <h3>自由观察</h3>
+          <p>按住左键旋转，滚轮缩放，右键平移。触屏支持单指旋转与双指缩放。</p>
+        </article>
+        <article>
+          <span class="guide-no">03</span>
+          <div class="guide-icon">⌖</div>
+          <h3>读取参数</h3>
+          <p>选中部件后，右侧面板显示结构说明与核心参数；三维标注会跟随部件移动。</p>
+        </article>
+        <article>
+          <span class="guide-no">04</span>
+          <div class="guide-icon">⌂</div>
+          <h3>还原整机</h3>
+          <p>点击「整机」或按 R 复位视角。按空格键可在整机与全拆解状态之间切换。</p>
+        </article>
+      </div>
+
+      <div class="shortcut-row">
+        <span><kbd>Space</kbd> 全拆解 / 整机</span>
+        <span><kbd>A</kbd> 自动旋转</span>
+        <span><kbd>L</kbd> 标注</span>
+        <span><kbd>R</kbd> 重置</span>
+        <span><kbd>Esc</kbd> 关闭</span>
+      </div>
+
+      <button class="btn btn-primary modal-cta" type="button" data-close-modal>进入拆解台 <span>→</span></button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
