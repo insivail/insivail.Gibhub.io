@@ -32,8 +32,10 @@
     isolatedId: null,
     labels: true,
     autoRotate: false,
-    section: { enabled: false, axis: 'z', offset: 2.6, flip: false, panelOpen: false },
-    light: { enabled: false, showView: true, showTake: false, panelOpen: false },
+    section: { enabled: false, axis: 'z', offset: 2.6, flip: false },
+    light: { enabled: false, showView: true, showTake: false },
+    flash: { up: false, firing: false, t: 0, intensity: 0 },
+    dock: null,
     fire: { active: false, t: 0, mirror: 0, shutter: 0, flash: 0, hold: false, holdT: 0 },
     view: 'hero',
     filter: 'all',
@@ -59,6 +61,7 @@
   let sensorLight;
   let sectionLight;
   let sectionFill;
+  let flashLight;
   let raycaster;
   let clock;
   let allMaterials = [];
@@ -138,6 +141,13 @@
     dom.sectionValue = $('#sectionValue');
     dom.btnSection = $('#btnSection');
     dom.btnLight = $('#btnLight');
+    dom.btnFlash = $('#btnFlash');
+    dom.flashPanel = $('#flashPanel');
+    dom.btnFlashToggle = $('#btnFlashToggle');
+    dom.btnFlashFire = $('#btnFlashFire');
+    dom.btnFlashClose = $('#flashClose');
+    dom.flashState = $('#flashState');
+    dom.flashBurst = $('#flashBurst');
     dom.btnLabels = $('#btnLabels');
     dom.btnRotate = $('#btnRotate');
     dom.btnDiag = $('#btnDiagnose');
@@ -175,7 +185,7 @@
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.95;
+    renderer.toneMappingExposure = 1.03;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.localClippingEnabled = true;
@@ -193,10 +203,10 @@
     envRT = pmrem.fromEquirectangular(envTex);
     scene.environment = envRT.texture;
 
-    const hemi = new THREE.HemisphereLight(0x9ac4ff, 0x030507, 0.42);
+    const hemi = new THREE.HemisphereLight(0xffe7b0, 0x1a1208, 0.5);
     scene.add(hemi);
 
-    const key = new THREE.SpotLight(0xffffff, 3.4, 120, 0.55, 0.85, 2);
+    const key = new THREE.SpotLight(0xfff8ee, 4.0, 120, 0.55, 0.85, 2);
     key.position.set(16, 22, 20);
     key.target.position.set(0, 1.5, 0);
     key.castShadow = true;
@@ -206,25 +216,30 @@
     key.shadow.camera.far = 90;
     scene.add(key, key.target);
 
-    const fill = new THREE.SpotLight(0x48ddff, 1.9, 100, 0.62, 0.9, 2);
+    const fill = new THREE.SpotLight(0xffc46b, 1.4, 100, 0.62, 0.9, 2);
     fill.position.set(-18, 9, 16);
     fill.target.position.set(0, 1, 0);
     scene.add(fill, fill.target);
 
-    const rim = new THREE.SpotLight(0x9a82ff, 2.8, 100, 0.58, 0.9, 2);
+    const rim = new THREE.SpotLight(0xffd98a, 2.6, 100, 0.58, 0.9, 2);
     rim.position.set(-10, 16, -22);
     rim.target.position.set(0, 2, 0);
     scene.add(rim, rim.target);
 
-    const cool = new THREE.PointLight(0x8fc8ff, 0.9, 80, 2);
+    const edge = new THREE.SpotLight(0xffe6b0, 2.8, 90, 0.3, 0.78, 2);
+    edge.position.set(13, 7, -12);
+    edge.target.position.set(0, 2, 0);
+    scene.add(edge, edge.target);
+
+    const cool = new THREE.PointLight(0xffd89b, 1.2, 80, 2);
     cool.position.set(0, 20, 2);
     scene.add(cool);
 
-    const front = new THREE.PointLight(0x5ee0ff, 0.45, 60, 2);
+    const front = new THREE.PointLight(0xffb85c, 0.7, 60, 2);
     front.position.set(0, 6, 22);
     scene.add(front);
 
-    scene.add(new THREE.AmbientLight(0x16273a, 0.55));
+    scene.add(new THREE.AmbientLight(0x2a1c0d, 0.48));
   }
 
   function buildWorld() {
@@ -241,14 +256,17 @@
     createLightPath();
     createSectionHelper();
 
-    sensorLight = new THREE.PointLight(0x77c8ff, 0, 22, 2);
+    sensorLight = new THREE.PointLight(0xffd37a, 0, 22, 2);
     scene.add(sensorLight);
-    sectionLight = new THREE.PointLight(0x7fd4ff, 0, 30, 1.6);
+    sectionLight = new THREE.PointLight(0xffe0a0, 0, 30, 1.6);
     sectionLight.position.set(0.9, 2.2, 1.0);
     scene.add(sectionLight);
-    sectionFill = new THREE.PointLight(0x3f9fff, 0, 26, 1.8);
+    sectionFill = new THREE.PointLight(0xd4a23a, 0, 26, 1.8);
     sectionFill.position.set(-2.4, -0.5, 0.6);
     scene.add(sectionFill);
+    flashLight = new THREE.PointLight(0xffc46b, 0, 26, 2);
+    flashLight.position.set(0.9, 7.4, -1.3);
+    scene.add(flashLight);
 
     allMaterials = [];
     const seen = new Set();
@@ -275,24 +293,24 @@
   function makeSectionTexture() {
     return CAM.modelUtils.canvasTexture(512, 512, (ctx, w, h) => {
       ctx.clearRect(0, 0, w, h);
-      ctx.strokeStyle = 'rgba(90,220,255,0.56)';
+      const cx = w / 2;
+      const cy = h / 2;
+      ctx.fillStyle = 'rgba(154,116,34,0.055)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(240,206,110,0.56)';
       ctx.lineWidth = 1;
-      for (let i = 0; i <= 16; i += 1) {
-        const p = (i / 16) * w;
+      for (let r = 24; r < w * 0.64; r += 28) {
         ctx.beginPath();
-        ctx.moveTo(p, 0);
-        ctx.lineTo(p, h);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, p);
-        ctx.lineTo(w, p);
+        ctx.arc(cx, cy, r, 0, TAU);
         ctx.stroke();
       }
-      ctx.strokeStyle = 'rgba(120,235,255,0.9)';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(4, 4, w - 8, h - 8);
-      ctx.fillStyle = 'rgba(30,120,160,0.06)';
-      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 12; i += 1) {
+        const a = (i / 12) * TAU;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * 16, cy + Math.sin(a) * 16);
+        ctx.lineTo(cx + Math.cos(a) * w * 0.62, cy + Math.sin(a) * w * 0.62);
+        ctx.stroke();
+      }
     });
   }
 
@@ -312,11 +330,6 @@
     sectionHelper = new THREE.Group();
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(30, 23), sectionHelperMat);
     sectionHelper.add(plane);
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.PlaneGeometry(30, 23)),
-      new THREE.LineBasicMaterial({ color: 0x5ee8ff, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })
-    );
-    sectionHelper.add(edges);
     sectionHelper.visible = false;
     scene.add(sectionHelper);
     sectionPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
@@ -364,7 +377,6 @@
 
     document.body.classList.toggle('section-on', sec.enabled);
     if (dom.btnSection) dom.btnSection.classList.toggle('is-on', sec.enabled);
-    if (dom.sectionPanel) dom.sectionPanel.hidden = !sec.enabled || !sec.panelOpen;
     if (sectionLight) sectionLight.intensity = sec.enabled ? 3.8 : 0;
     if (sectionFill) sectionFill.intensity = sec.enabled ? 1.8 : 0;
     if (dom.sectionOffset) dom.sectionOffset.value = String(sec.offset);
@@ -383,12 +395,14 @@
     $$('#sectionPresets [data-cross]').forEach((b) => b.classList.toggle('is-active', b.dataset.cross === activeCross));
     const flip = $('#sectionFlip');
     if (flip) flip.classList.toggle('is-on', sec.flip);
+    updateDock();
   }
 
   function setSectionEnabled(enabled, options = {}) {
     if (enabled && isMobile() && state.light.enabled) setLightEnabled(false);
     state.section.enabled = !!enabled;
-    state.section.panelOpen = !!enabled;
+    if (enabled) state.dock = 'section';
+    else if (state.dock === 'section') state.dock = null;
     if (options.axis) state.section.axis = options.axis;
     if (options.offset != null) state.section.offset = clamp(options.offset, -7, 7);
     if (options.flip != null) state.section.flip = !!options.flip;
@@ -438,7 +452,7 @@
       segs.push({ core, glow });
     }
     const nodeMat = new THREE.MeshBasicMaterial({
-      color: 0xd6fbff,
+      color: 0xfff6dd,
       transparent: true,
       opacity: 0.95,
       blending: THREE.AdditiveBlending,
@@ -483,7 +497,7 @@
     group.add(arrow);
 
     const pulseMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
+      color: 0xfff2cc,
       transparent: true,
       opacity: 0.95,
       blending: THREE.AdditiveBlending,
@@ -516,8 +530,8 @@
 
   function createLightPath() {
     lightPath = {
-      view: makePath(0x67eaff, 0x2e9bd6, 4, 4, 0.046),
-      take: makePath(0xffc36a, 0xff7f2e, 1, 3, 0.055)
+      view: makePath(0xffe3a4, 0xd4a23a, 4, 4, 0.046),
+      take: makePath(0xffb347, 0xff7a1a, 1, 3, 0.055)
     };
   }
 
@@ -625,13 +639,13 @@
   function setLightEnabled(enabled) {
     if (enabled && isMobile() && state.section.enabled) setSectionEnabled(false);
     state.light.enabled = !!enabled;
-    state.light.panelOpen = !!enabled;
+    if (enabled) state.dock = 'light';
+    else if (state.dock === 'light') state.dock = null;
     if (!state.light.enabled) {
       state.light.showTake = false;
       cancelFire(false);
     }
     if (dom.btnLight) dom.btnLight.classList.toggle('is-on', state.light.enabled);
-    if (dom.lightPanel) dom.lightPanel.hidden = !state.light.enabled || !state.light.panelOpen;
     if (dom.lightView) dom.lightView.classList.toggle('is-on', state.light.showView);
     if (dom.lightTake) dom.lightTake.classList.toggle('is-on', state.light.showTake);
     document.body.classList.toggle('light-on', state.light.enabled);
@@ -639,14 +653,122 @@
       lightPath.view.group.visible = false;
       lightPath.take.group.visible = false;
     }
+    updateDock();
     if (!state.testing) {
-      showToast(state.light.enabled ? '光路显示已开启 · 青蓝为取景光路' : '光路显示已关闭');
+      showToast(state.light.enabled ? '光路显示已开启 · 香槟金为取景光路' : '光路显示已关闭');
     }
   }
 
   function setLightTake(show) {
     state.light.showTake = !!show;
     if (dom.lightTake) dom.lightTake.classList.toggle('is-on', state.light.showTake);
+  }
+
+  function updateDock() {
+    const dock = state.dock;
+    if (dom.sectionPanel) dom.sectionPanel.hidden = !(state.section.enabled && dock === 'section');
+    if (dom.lightPanel) dom.lightPanel.hidden = !(state.light.enabled && dock === 'light');
+    if (dom.flashPanel) dom.flashPanel.hidden = dock !== 'flash';
+    if (dom.btnSection) {
+      dom.btnSection.classList.toggle('is-active', dock === 'section');
+      dom.btnSection.classList.toggle('is-on', state.section.enabled);
+    }
+    if (dom.btnLight) {
+      dom.btnLight.classList.toggle('is-active', dock === 'light');
+      dom.btnLight.classList.toggle('is-on', state.light.enabled);
+    }
+    if (dom.btnFlash) {
+      dom.btnFlash.classList.toggle('is-active', dock === 'flash');
+      dom.btnFlash.classList.toggle('is-on', state.flash.up);
+    }
+    document.body.classList.toggle('dock-open', !!dock);
+  }
+
+  function activateDock(name) {
+    if (name === 'section') {
+      if (!state.section.enabled) setSectionEnabled(true);
+      state.dock = 'section';
+      applySection(false);
+    } else if (name === 'light') {
+      if (!state.light.enabled) setLightEnabled(true);
+      state.dock = 'light';
+      updateDock();
+    } else {
+      state.dock = 'flash';
+      updateDock();
+    }
+    updateFlashUI();
+  }
+
+  function flashModule() {
+    return model && model.byId.topShell ? model.byId.topShell.flash : null;
+  }
+
+  function updateFlashUI() {
+    if (dom.btnFlashToggle) dom.btnFlashToggle.textContent = state.flash.up ? '收回闪光灯' : '升起闪光灯';
+    if (dom.flashState) {
+      dom.flashState.textContent = state.flash.firing ? '闪光中' : state.flash.up ? '已升起' : '已收起';
+      dom.flashState.classList.toggle('is-up', state.flash.up);
+      dom.flashState.classList.toggle('is-firing', state.flash.firing);
+    }
+    if (dom.btnFlash) dom.btnFlash.classList.toggle('is-on', state.flash.up || state.dock === 'flash');
+    if (dom.btnFlashFire) dom.btnFlashFire.disabled = false;
+  }
+
+  function setFlashUp(up, silent = false) {
+    const fp = flashModule();
+    if (!fp) return;
+    state.flash.up = !!up;
+    if (state.flash.up) {
+      fp.group.visible = true;
+      state.dock = 'flash';
+      updateDock();
+    } else {
+      state.flash.firing = false;
+    }
+    updateFlashUI();
+    if (!silent) showToast(state.flash.up ? '内置闪光灯已升起' : '内置闪光灯已收回');
+  }
+
+  function fireFlash() {
+    const fp = flashModule();
+    if (!fp) return;
+    if (!state.flash.up) setFlashUp(true, true);
+    state.flash.firing = true;
+    state.flash.t = 0;
+    updateFlashUI();
+    showToast('内置闪光灯 · 单次闪光');
+  }
+
+  function updateFlash(dt) {
+    const fp = flashModule();
+    if (!fp) return;
+    const f = state.flash;
+    const targetY = f.up ? fp.upY : fp.baseY;
+    fp.group.position.y = damp(fp.group.position.y, targetY, 11, dt);
+    fp.group.rotation.x = damp(fp.group.rotation.x, f.up ? -0.18 : 0, 10, dt);
+    if (f.up) fp.group.visible = true;
+    else if (Math.abs(fp.group.position.y - fp.baseY) < 0.01) fp.group.visible = false;
+
+    if (f.firing) {
+      f.t += dt;
+      const env = clamp(1 - f.t / 0.5, 0, 1);
+      f.intensity = env * env;
+      if (f.t > 0.6) {
+        f.firing = false;
+        updateFlashUI();
+      }
+    } else {
+      f.intensity = damp(f.intensity, 0, 10, dt);
+    }
+
+    if (flashLight) {
+      fp.group.getWorldPosition(tempV);
+      flashLight.position.copy(tempV);
+      flashLight.intensity = f.intensity * 24 + (f.up ? 0.18 : 0);
+    }
+    if (fp.glassMat) fp.glassMat.emissiveIntensity = 0.22 + f.intensity * 4.8;
+    if (dom.flashBurst) dom.flashBurst.style.opacity = String(f.intensity * 0.42);
   }
 
   function triggerFire() {
@@ -846,6 +968,9 @@
     state.selectedId = null;
     setSectionEnabled(false);
     setLightEnabled(false);
+    setFlashUp(false, true);
+    state.dock = null;
+    updateDock();
     applyVisibility();
     applyHighlight();
     renderDetail(null);
@@ -1093,7 +1218,7 @@
       part.materials.forEach((mat) => {
         if (!mat || !mat.emissive) return;
         if (selected || hovered) {
-          mat.emissive.setHex(selected ? 0x1d5b73 : 0x123a4a);
+          mat.emissive.setHex(selected ? 0x7a5a16 : 0x3a2a08);
           mat.emissiveIntensity = selected ? 0.26 : 0.14;
         } else {
           const base = mat.userData.baseEmissive;
@@ -1592,28 +1717,19 @@
     });
 
     dom.btnSection.addEventListener('click', () => {
-      if (state.section.enabled) {
-        if (!state.section.panelOpen) {
-          state.section.panelOpen = true;
-          applySection(false);
-        } else {
-          setSectionEnabled(false);
-        }
-      } else {
-        setSectionEnabled(true);
-      }
+      if (state.section.enabled && state.dock === 'section') setSectionEnabled(false);
+      else activateDock('section');
     });
     dom.btnLight.addEventListener('click', () => {
-      if (state.light.enabled) {
-        if (!state.light.panelOpen) {
-          state.light.panelOpen = true;
-          dom.lightPanel.hidden = false;
-        } else {
-          setLightEnabled(false);
-        }
-      } else {
-        setLightEnabled(true);
-      }
+      if (state.light.enabled && state.dock === 'light') setLightEnabled(false);
+      else activateDock('light');
+    });
+    dom.btnFlash.addEventListener('click', () => activateDock('flash'));
+    dom.btnFlashToggle.addEventListener('click', () => setFlashUp(!state.flash.up));
+    dom.btnFlashFire.addEventListener('click', fireFlash);
+    dom.btnFlashClose.addEventListener('click', () => {
+      state.dock = null;
+      updateDock();
     });
     dom.btnLabels.addEventListener('click', () => {
       state.labels = !state.labels;
@@ -1668,11 +1784,7 @@
       state.section.flip = !state.section.flip;
       applySection(true);
     });
-    $('#sectionClose').addEventListener('click', () => {
-      state.section.panelOpen = false;
-      applySection(false);
-      showToast('剖切保持开启 · 再次点击顶部「剖切」可关闭');
-    });
+    $('#sectionClose').addEventListener('click', () => setSectionEnabled(false));
 
     dom.lightView.addEventListener('click', () => {
       state.light.showView = !state.light.showView;
@@ -1682,11 +1794,7 @@
       setLightTake(!state.light.showTake);
     });
     dom.btnFire.addEventListener('click', triggerFire);
-    $('#lightClose').addEventListener('click', () => {
-      state.light.panelOpen = false;
-      dom.lightPanel.hidden = true;
-      showToast('光路保持显示 · 再次点击顶部「光路」可关闭');
-    });
+    $('#lightClose').addEventListener('click', () => setLightEnabled(false));
 
     dom.btnDiag.addEventListener('click', toggleDiagnostics);
     $('#diagClose').addEventListener('click', toggleDiagnostics);
@@ -1726,6 +1834,8 @@
         dom.btnLight.click();
       } else if (e.key.toLowerCase() === 'f') {
         triggerFire();
+      } else if (e.key.toLowerCase() === 'g') {
+        fireFlash();
       } else if (e.key === 'Escape') {
         closeDrawers();
         closeGuide();
@@ -1890,7 +2000,7 @@
     dom.diagPanel.hidden = !state.diagOpen;
     dom.btnDiag.classList.toggle('is-on', state.diagOpen);
     if (state.diagOpen && !dom.diagResults.children.length) {
-      dom.diagResults.innerHTML = '<li class="diag-idle">点击「运行自检」执行 15 项状态与交互断言。</li>';
+      dom.diagResults.innerHTML = '<li class="diag-idle">点击「运行自检」执行 16 项状态与交互断言。</li>';
       dom.diagSummary.textContent = 'READY';
     }
   }
@@ -1911,6 +2021,8 @@
       isolatedId: state.isolatedId,
       section: { ...state.section },
       light: { ...state.light },
+      flash: { ...state.flash },
+      dock: state.dock,
       view: state.view,
       orbit: { ...orbit, target: orbit.target.clone(), currentTarget: orbit.currentTarget.clone() }
     };
@@ -1927,12 +2039,24 @@
     state.isolatedId = snap.isolatedId;
     state.section = { ...snap.section };
     state.light = { ...snap.light };
+    state.flash = { ...(snap.flash || { up: false, firing: false, t: 0, intensity: 0 }), firing: false, t: 0, intensity: 0 };
+    state.dock = snap.dock || null;
     state.view = snap.view;
     cancelFire(false);
     resetFireDemo();
+    const fp = flashModule();
+    if (fp) {
+      fp.group.visible = state.flash.up;
+      fp.group.position.y = state.flash.up ? fp.upY : fp.baseY;
+      fp.group.rotation.x = state.flash.up ? -0.18 : 0;
+    }
+    if (flashLight) flashLight.intensity = 0;
+    if (dom.flashBurst) dom.flashBurst.style.opacity = '0';
     Object.assign(orbit, snap.orbit);
     applySection(true);
     setLightEnabled(state.light.enabled);
+    state.dock = snap.dock || null;
+    updateDock();
     applyVisibility();
     applyExplosion();
     applyHighlight();
@@ -1941,10 +2065,7 @@
     updateLabels();
     updateReticle();
     updateButtons();
-    dom.btnSection.classList.toggle('is-on', state.section.enabled);
-    dom.btnLight.classList.toggle('is-on', state.light.enabled);
-    dom.lightPanel.hidden = !state.light.enabled;
-    dom.sectionPanel.hidden = !state.section.enabled;
+    updateFlashUI();
   }
 
   function advanceSim(seconds, step = 0.04) {
@@ -2197,6 +2318,26 @@
           detail: `Δθ=${(orbit.tTheta - beforeTheta).toFixed(3)} rad · zoom ${beforeZoom.toFixed(2)}→${orbit.tZoom.toFixed(2)}`
         };
       });
+
+      testAssert(results, '16 闪光灯升降 / 闪光', () => {
+        const fp = flashModule();
+        if (!fp) return 'flash module missing';
+        setFlashUp(true, true);
+        for (let i = 0; i < 12; i += 1) updateFlash(0.05);
+        const up = fp.group.visible && Math.abs(fp.group.position.y - fp.upY) < 0.08;
+        fireFlash();
+        updateFlash(0.06);
+        const lit = flashLight && flashLight.intensity > 1;
+        for (let i = 0; i < 14; i += 1) updateFlash(0.05);
+        const ended = !state.flash.firing && state.flash.intensity < 0.05;
+        setFlashUp(false, true);
+        for (let i = 0; i < 24; i += 1) updateFlash(0.05);
+        const down = !fp.group.visible;
+        return {
+          pass: up && lit && ended && down,
+          detail: `up=${up} lit=${lit} ended=${ended} retract=${down}`
+        };
+      });
     } finally {
       const elapsed = performance.now() - started;
       const passed = results.filter((r) => r.pass).length;
@@ -2248,6 +2389,7 @@
     state.time += dt;
     stepSimulation(dt);
     updateFire(dt);
+    updateFlash(dt);
     updateCamera(dt);
     updateRig(dt);
     updateLightPath();
@@ -2292,6 +2434,8 @@
     setView('hero', true);
     setLightEnabled(false);
     setSectionEnabled(false);
+    updateDock();
+    updateFlashUI();
     updateButtons();
     bootAnim();
     requestAnimationFrame(loop);
@@ -2326,6 +2470,9 @@
         setLight: setLightEnabled,
         setLightTake,
         fire: triggerFire,
+        flashUp: setFlashUp,
+        flashFire: fireFlash,
+        dock: activateDock,
         setView,
         focus: (id) => focusPart(getPart(id)),
         showAllVisible,
@@ -2348,16 +2495,16 @@
       const offset = query.get('offset') != null ? Number(query.get('offset')) : (axis === 'x' ? 0 : axis === 'y' ? 2.2 : 2.6);
       setSectionEnabled(true, { axis, offset });
       if (query.get('panel') === '0') {
-        state.section.panelOpen = false;
-        applySection(false);
+        state.dock = null;
+        updateDock();
       }
     }
     if (query.get('light') === '1') {
       setLightEnabled(true);
       if (query.get('take') === '1') setLightTake(true);
       if (query.get('panel') === '0') {
-        state.light.panelOpen = false;
-        dom.lightPanel.hidden = true;
+        state.dock = null;
+        updateDock();
       }
       if (query.get('fire') === '1') {
         setTimeout(() => {
@@ -2368,6 +2515,14 @@
           }
         }, 700);
       }
+    }
+    if (query.get('flash') === '1') {
+      setTimeout(() => {
+        setFlashUp(true, true);
+        state.dock = query.get('panel') === '0' ? null : 'flash';
+        updateDock();
+        if (query.get('fire') === '1') setTimeout(fireFlash, 500);
+      }, 700);
     }
     if (query.get('select')) {
       setTimeout(() => selectPart(query.get('select'), { openDrawer: false }), 80);
@@ -2408,6 +2563,20 @@
     init();
   }
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

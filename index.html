@@ -50,12 +50,6 @@
           <button type="button" data-view="right">右侧</button>
         </div>
         <div class="tool-row">
-          <button class="tool-btn" id="btnLight" type="button" title="光路显示 (P)">
-            <span class="tool-ico ico-light"></span><em>光路</em>
-          </button>
-          <button class="tool-btn" id="btnSection" type="button" title="真实剖切 (X)">
-            <span class="tool-ico ico-cut"></span><em>剖切</em>
-          </button>
           <button class="tool-btn is-on" id="btnLabels" type="button" title="零件标签 (L)">
             <span class="tool-ico ico-label"></span><em>标注</em>
           </button>
@@ -147,47 +141,7 @@
           <button id="zoomOut" type="button" aria-label="缩小">−</button>
         </div>
 
-        <div class="axis-badge">
-          <span>Y</span><i></i><span>X</span><small>ORBIT / 360°</small>
-        </div>
-
-        <section class="float-panel section-panel" id="sectionPanel" hidden aria-label="剖切设置">
-          <header class="float-head">
-            <div><p class="panel-kicker">CROSS SECTION</p><h3>真实剖切</h3></div>
-            <button type="button" id="sectionClose" aria-label="收起剖切面板">×</button>
-          </header>
-          <p class="float-note">裁切平面实时作用于全部零件材质；拖动偏移量观察镜箱、五棱镜、快门与 CMOS。</p>
-          <div class="axis-picker" id="sectionAxis">
-            <button type="button" data-axis="x">X 轴</button>
-            <button type="button" data-axis="y">Y 轴</button>
-            <button type="button" class="is-active" data-axis="z">Z 轴</button>
-          </div>
-          <div class="section-presets" id="sectionPresets">
-            <button type="button" data-cross="box">反光镜箱</button>
-            <button type="button" data-cross="shutter">快门</button>
-            <button type="button" data-cross="cmos">CMOS</button>
-            <button type="button" data-cross="frame">骨架</button>
-          </div>
-          <label class="range-row">
-            <span>平面偏移</span><b id="sectionValue">0.0 cm</b>
-            <input type="range" id="sectionOffset" min="-7" max="7" step="0.1" value="0" />
-          </label>
-          <button class="mini-btn" id="sectionFlip" type="button">翻转保留侧</button>
-        </section>
-
-        <section class="float-panel light-panel" id="lightPanel" hidden aria-label="光路演示">
-          <header class="float-head">
-            <div><p class="panel-kicker">OPTICAL PATH</p><h3>光路演示</h3></div>
-            <button type="button" id="lightClose" aria-label="收起光路面板">×</button>
-          </header>
-          <p class="float-note">青色：镜头 → 反光镜 → 对焦屏 → 五棱镜 → 目镜。琥珀色：反光镜抬起后，光线直达 CMOS。</p>
-          <div class="light-toggles">
-            <button type="button" class="is-on" id="lightViewToggle"><i class="line-cyan"></i>取景光路</button>
-            <button type="button" id="lightTakeToggle"><i class="line-amber"></i>成像光路</button>
-          </div>
-          <button class="fire-btn" id="btnFire" type="button"><span></span>触发快门演示</button>
-          <p class="float-foot">反光镜抬起 · 前帘释放 · 曝光 · 后帘闭合</p>
-        </section>
+        <div class="flash-burst" id="flashBurst" aria-hidden="true"></div>
 
         <section class="float-panel diag-panel" id="diagPanel" hidden aria-label="内置自检">
           <header class="float-head">
@@ -215,12 +169,63 @@
       <aside class="panel panel-right" id="rightPanel" aria-label="部件详情">
         <div class="panel-head right-head">
           <div>
-            <p class="panel-kicker">COMPONENT DATA</p>
-            <h2>部件详情</h2>
+            <p class="panel-kicker">CONTROL DECK</p>
+            <h2>控制与详情</h2>
           </div>
           <span class="detail-index" id="detailIndex">00 / 15</span>
-          <button class="drawer-close" type="button" data-close-drawer aria-label="关闭部件详情">×</button>
+          <button class="drawer-close" type="button" data-close-drawer aria-label="关闭控制与详情">×</button>
         </div>
+
+        <div class="tool-dock" id="toolDock">
+          <div class="dock-tabs" role="tablist" aria-label="机身工具">
+            <button id="btnSection" type="button" role="tab">剖切</button>
+            <button id="btnLight" type="button" role="tab">光路</button>
+            <button id="btnFlash" type="button" role="tab">内置闪光灯</button>
+          </div>
+
+          <section class="dock-panel" id="sectionPanel" hidden aria-label="剖切设置">
+            <div class="dock-head"><span>CROSS SECTION / 剖切</span><button type="button" id="sectionClose" aria-label="关闭剖切">×</button></div>
+            <p class="dock-note">实时裁切全部零件材质。拖动偏移量观察镜箱、五棱镜、快门与 CMOS。</p>
+            <div class="axis-picker" id="sectionAxis">
+              <button type="button" data-axis="x">横向</button>
+              <button type="button" data-axis="y">纵向</button>
+              <button type="button" class="is-active" data-axis="z">纵深</button>
+            </div>
+            <div class="section-presets" id="sectionPresets">
+              <button type="button" data-cross="box">反光镜箱</button>
+              <button type="button" data-cross="shutter">快门</button>
+              <button type="button" data-cross="cmos">CMOS</button>
+              <button type="button" data-cross="frame">骨架</button>
+            </div>
+            <label class="range-row">
+              <span>平面偏移</span><b id="sectionValue">0.0 cm</b>
+              <input type="range" id="sectionOffset" min="-7" max="7" step="0.1" value="0" />
+            </label>
+            <button class="mini-btn" id="sectionFlip" type="button">翻转保留侧</button>
+          </section>
+
+          <section class="dock-panel" id="lightPanel" hidden aria-label="光路演示">
+            <div class="dock-head"><span>OPTICAL PATH / 光路</span><button type="button" id="lightClose" aria-label="关闭光路">×</button></div>
+            <p class="dock-note">香槟金：镜头 → 反光镜 → 对焦屏 → 五棱镜 → 目镜。暖金：反光镜抬起后直达 CMOS。</p>
+            <div class="light-toggles">
+              <button type="button" class="is-on" id="lightViewToggle"><i class="line-gold"></i>取景光路</button>
+              <button type="button" id="lightTakeToggle"><i class="line-amber"></i>成像光路</button>
+            </div>
+            <button class="fire-btn" id="btnFire" type="button"><span></span>触发快门演示</button>
+            <p class="dock-foot">反光镜抬起 · 前帘释放 · 曝光 · 后帘闭合</p>
+          </section>
+
+          <section class="dock-panel" id="flashPanel" hidden aria-label="内置闪光灯">
+            <div class="dock-head"><span>BUILT-IN FLASH / 内置闪光灯</span><button type="button" id="flashClose" aria-label="关闭闪光灯面板">×</button></div>
+            <p class="dock-note">概念性弹出式闪光模块。升起后可进行单次闪光测试，不影响拆解进度与部件选择。</p>
+            <div class="flash-actions">
+              <button type="button" id="btnFlashToggle">升起闪光灯</button>
+              <button type="button" id="btnFlashFire">闪光测试</button>
+            </div>
+            <div class="flash-status" id="flashState">已收起</div>
+          </section>
+        </div>
+
         <div class="detail-scroll" id="detailScroll">
           <div class="detail-content" id="detailContent"></div>
         </div>
@@ -291,7 +296,7 @@
       <div class="guide-grid">
         <article><span class="guide-no">01</span><h3>分级拆解</h3><p>点击「开始拆解」或拖动底部滑块。拆解按卡口 → 外壳 → 骨架 → 光学 → 快门 → 电子顺序推进，0% 为完整装配，100% 为完全分解。</p></article>
         <article><span class="guide-no">02</span><h3>选择与隔离</h3><p>点击 3D 部件、左侧列表或悬浮标签查看详情。列表右侧的眼睛按钮隐藏部件，准星按钮进入隔离视图；「全部显示」可一键恢复。</p></article>
-        <article><span class="guide-no">03</span><h3>剖切与光路</h3><p>顶部「剖切」打开裁切平面，可切换 X/Y/Z 轴并拖动偏移量。顶部「光路」显示取景链路，点击「触发快门演示」观察反光镜抬起、帘幕开启与 CMOS 曝光。</p></article>
+        <article><span class="guide-no">03</span><h3>剖切 / 光路 / 闪光</h3><p>右侧悬浮窗内切换「剖切」「光路」「内置闪光灯」。剖切支持横向、纵向、纵深与偏移；光路可触发快门演示；闪光灯可升起并测试单次闪光。</p></article>
         <article><span class="guide-no">04</span><h3>相机操作</h3><p>左键拖动旋转，滚轮缩放，右键或 Shift 拖动平移；触屏单指旋转、双指缩放。双击部件可直接聚焦。R 复位视角，L 切换标注，Esc 关闭面板。</p></article>
       </div>
       <div class="shortcut-row">
@@ -300,6 +305,7 @@
         <span><kbd>X</kbd> 剖切</span>
         <span><kbd>P</kbd> 光路</span>
         <span><kbd>F</kbd> 快门演示</span>
+        <span><kbd>G</kbd> 闪光灯</span>
         <span><kbd>R</kbd> 复位视角</span>
         <span><kbd>Esc</kbd> 关闭</span>
       </div>
@@ -313,5 +319,7 @@
   <script src="js/app.js"></script>
 </body>
 </html>
+
+
 
 

@@ -1,4 +1,4 @@
-﻿/* =========================================================================
+/* =========================================================================
    CANON EOS 6D — PROCEDURAL MODEL
    Every part is generated from primitives. No external mesh or image files.
    ========================================================================= */
@@ -48,6 +48,141 @@
       ctx.arc(x, y, r, 0, TAU);
       ctx.fill();
     }
+  }
+
+  function makeShellColorTexture(size = 1024) {
+    return canvasTexture(size, size, (ctx, w, h) => {
+      ctx.fillStyle = '#0d0e10';
+      ctx.fillRect(0, 0, w, h);
+
+      // Large, low-contrast anodized mottling.
+      for (let i = 0; i < 70; i += 1) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 6 + Math.random() * 24;
+        const warm = Math.random() > 0.45;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, warm ? 'rgba(44,46,48,0.025)' : 'rgba(2,2,2,0.04)');
+        g.addColorStop(0.55, warm ? 'rgba(32,34,36,0.012)' : 'rgba(3,3,3,0.018)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, TAU);
+        ctx.fill();
+      }
+
+      // Fine pigment grain and a few warm metallic flecks.
+      for (let i = 0; i < 34000; i += 1) {
+        const v = 9 + Math.random() * 15;
+        ctx.fillStyle = `rgba(${v + 8},${v + 5},${v},${0.12 + Math.random() * 0.2})`;
+        const s = Math.random() > 0.9 ? 1.4 : 0.7;
+        ctx.fillRect(Math.random() * w, Math.random() * h, s, s);
+      }
+      for (let i = 0; i < 360; i += 1) {
+        ctx.fillStyle = `rgba(${150 + Math.random() * 60},${112 + Math.random() * 42},${46 + Math.random() * 26},${0.04 + Math.random() * 0.08})`;
+        ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+      }
+
+      // Very subtle micro-scuffs, isotropic rather than brushed.
+      ctx.lineWidth = 0.55;
+      for (let i = 0; i < 70; i += 1) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const a = Math.random() * TAU;
+        const len = 3 + Math.random() * 22;
+        ctx.strokeStyle = `rgba(120,100,72,${0.025 + Math.random() * 0.05})`;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+        ctx.stroke();
+      }
+    }, { repeat: [7, 7], anisotropy: 8 });
+  }
+
+  function makeShellRoughTexture(size = 1024) {
+    return canvasTexture(size, size, (ctx, w, h) => {
+      ctx.fillStyle = '#c8c8c8';
+      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 160; i += 1) {
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 22 + Math.random() * 110;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        const v = 155 + Math.random() * 55;
+        g.addColorStop(0, `rgba(${v},${v},${v},0.28)`);
+        g.addColorStop(1, 'rgba(190,190,190,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, TAU);
+        ctx.fill();
+      }
+      speckle(ctx, w, h, 14000, 0.4, 1.3, 0.18, true);
+      speckle(ctx, w, h, 5000, 0.5, 1.8, 0.12, false);
+    }, { srgb: false, repeat: [6, 6], anisotropy: 8 });
+  }
+
+  function makeShellNormalTexture(size = 512) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, size, size);
+
+    // Build a fine height field, then derive normals with a wrapped Sobel pass.
+    for (let i = 0; i < 9000; i += 1) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = 0.45 + Math.random() * 1.8;
+      const v = Math.random() > 0.5 ? 255 : 0;
+      ctx.fillStyle = `rgba(${v},${v},${v},${0.16 + Math.random() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU);
+      ctx.fill();
+    }
+    for (let i = 0; i < 90; i += 1) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = 8 + Math.random() * 34;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(255,255,255,0.12)');
+      g.addColorStop(1, 'rgba(128,128,128,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU);
+      ctx.fill();
+    }
+
+    const src = ctx.getImageData(0, 0, size, size);
+    const out = ctx.createImageData(size, size);
+    const height = (x, y) => src.data[((((y % size) + size) % size) * size + (((x % size) + size) % size)) * 4] / 255;
+    const strength = 0.9;
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const dx = height(x + 1, y) - height(x - 1, y);
+        const dy = height(x, y + 1) - height(x, y - 1);
+        let nx = -dx * strength;
+        let ny = -dy * strength;
+        let nz = 1;
+        const len = Math.hypot(nx, ny, nz) || 1;
+        nx /= len; ny /= len; nz /= len;
+        const o = (y * size + x) * 4;
+        out.data[o] = (nx * 0.5 + 0.5) * 255;
+        out.data[o + 1] = (ny * 0.5 + 0.5) * 255;
+        out.data[o + 2] = (nz * 0.5 + 0.5) * 255;
+        out.data[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(out, 0, 0);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(6, 6);
+    texture.anisotropy = 8;
+    texture.needsUpdate = true;
+    return texture;
   }
 
   function makeGrainTexture(size = 512) {
@@ -159,7 +294,7 @@
       }
 
       // Pads and vias.
-      for (let i = 0; i < 220; i += 1) {
+      for (let i = 0; i < 70; i += 1) {
         const x = 16 + rnd() * (w - 32);
         const y = 16 + rnd() * (h - 32);
         ctx.fillStyle = rnd() > 0.3 ? '#d6b05b' : '#b88932';
@@ -202,7 +337,7 @@
 
   function makeLcdTexture() {
     return canvasTexture(768, 512, (ctx, w, h) => {
-      ctx.fillStyle = '#07111a';
+      ctx.fillStyle = '#0a0805';
       ctx.fillRect(0, 0, w, h);
       const g = ctx.createRadialGradient(w * 0.45, h * 0.4, 10, w * 0.45, h * 0.4, w * 0.7);
       g.addColorStop(0, 'rgba(46,110,150,0.18)');
@@ -215,7 +350,7 @@
       const py = 30;
       const pw = 716;
       const ph = 360;
-      ctx.fillStyle = '#101f26';
+      ctx.fillStyle = '#15110b';
       ctx.fillRect(px, py, pw, ph);
       const sky = ctx.createLinearGradient(0, py, 0, py + ph);
       sky.addColorStop(0, '#1a3d55');
@@ -242,31 +377,31 @@
         ctx.strokeRect(px + 60 + i * 200, py + 70 + i * 35, 140, 90);
       }
       // Focus points.
-      ctx.strokeStyle = 'rgba(120,230,255,0.55)';
+      ctx.strokeStyle = 'rgba(240,206,110,0.55)';
       const pts = [
         [0.28, 0.35], [0.5, 0.32], [0.72, 0.38], [0.2, 0.5], [0.4, 0.5],
         [0.6, 0.5], [0.8, 0.52], [0.33, 0.65], [0.5, 0.66], [0.67, 0.64], [0.5, 0.2]
       ];
       pts.forEach(([fx, fy], i) => {
-        ctx.strokeStyle = i === 4 ? 'rgba(255,210,90,0.9)' : 'rgba(120,230,255,0.45)';
+        ctx.strokeStyle = i === 4 ? 'rgba(255,227,164,0.95)' : 'rgba(240,206,110,0.45)';
         ctx.strokeRect(px + fx * pw - 12, py + fy * ph - 8, 24, 16);
       });
 
       // Header / footer.
-      ctx.fillStyle = '#dceef8';
+      ctx.fillStyle = '#f0e8d8';
       ctx.font = '600 22px "Segoe UI", Arial, sans-serif';
       ctx.fillText('EOS 6D', 26, 22);
       ctx.font = '500 16px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#79d8ff';
+      ctx.fillStyle = '#e8c76f';
       ctx.fillText('RAW  20.2MP', 560, 22);
-      ctx.fillStyle = '#dceef8';
+      ctx.fillStyle = '#f0e8d8';
       ctx.font = '600 20px "Segoe UI", Arial, sans-serif';
       ctx.fillText('1/125', 34, 438);
       ctx.fillText('F4.0', 150, 438);
       ctx.fillText('ISO 400', 250, 438);
-      ctx.fillStyle = '#ffd45e';
+      ctx.fillStyle = '#f0ce6e';
       ctx.fillText('AF', 420, 438);
-      ctx.fillStyle = '#dceef8';
+      ctx.fillStyle = '#f0e8d8';
       ctx.fillText('WB  5200K', 500, 438);
       ctx.fillText('+0.3', 660, 438);
 
@@ -283,10 +418,10 @@
       }
       ctx.lineTo(726, 470);
       ctx.stroke();
-      ctx.fillStyle = '#71d9ff';
+      ctx.fillStyle = '#e8c76f';
       ctx.font = '11px "Segoe UI", Arial, sans-serif';
       ctx.fillText('HISTOGRAM', 526, 414);
-      ctx.fillStyle = '#8d9aa8';
+      ctx.fillStyle = '#a08f73';
       ctx.font = '12px "Segoe UI", Arial, sans-serif';
       ctx.fillText('6D  /  35.8 × 23.9 mm  /  DIGIC 5+', 26, 492);
       ctx.strokeStyle = 'rgba(112,213,255,0.35)';
@@ -347,22 +482,22 @@
   function makeSensorTexture() {
     return canvasTexture(1024, 683, (ctx, w, h) => {
       const g = ctx.createLinearGradient(0, 0, w, h);
-      g.addColorStop(0, '#222a66');
-      g.addColorStop(0.35, '#121644');
-      g.addColorStop(0.7, '#252c74');
-      g.addColorStop(1, '#0d1038');
+      g.addColorStop(0, '#3a2a10');
+      g.addColorStop(0.35, '#1a1208');
+      g.addColorStop(0.7, '#5a4218');
+      g.addColorStop(1, '#0d0904');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
       // Pixel / microlens grid.
       for (let y = 6; y < h; y += 7) {
         for (let x = 6; x < w; x += 7) {
           const v = 40 + Math.random() * 80;
-          ctx.fillStyle = `rgba(${v + 30},${v + 45},${v + 120},${0.24 + Math.random() * 0.25})`;
+          ctx.fillStyle = `rgba(${v + 55},${v + 38},${v + 10},${0.24 + Math.random() * 0.25})`;
           ctx.beginPath();
           ctx.arc(x, y, 2.1, 0, TAU);
           ctx.fill();
           if ((x + y) % 11 === 0) {
-            ctx.fillStyle = 'rgba(160,190,255,0.3)';
+            ctx.fillStyle = 'rgba(255,220,150,0.32)';
             ctx.fillRect(x - 2, y - 2, 4, 4);
           }
         }
@@ -375,10 +510,10 @@
       shine.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = shine;
       ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = 'rgba(196,220,255,0.55)';
+      ctx.strokeStyle = 'rgba(240,206,110,0.6)';
       ctx.lineWidth = 6;
       ctx.strokeRect(10, 10, w - 20, h - 20);
-      ctx.strokeStyle = 'rgba(120,140,220,0.4)';
+      ctx.strokeStyle = 'rgba(154,116,34,0.42)';
       ctx.lineWidth = 1;
       for (let i = 0; i < 8; i += 1) {
         ctx.beginPath();
@@ -483,19 +618,19 @@
   function makeMirrorTexture() {
     return canvasTexture(512, 512, (ctx, w, h) => {
       const g = ctx.createLinearGradient(0, 0, w, h);
-      g.addColorStop(0, '#e8efff');
-      g.addColorStop(0.22, '#aebcff');
-      g.addColorStop(0.5, '#6d75e8');
-      g.addColorStop(0.72, '#3c47b5');
-      g.addColorStop(1, '#b9c8ff');
+      g.addColorStop(0, '#fff6dd');
+      g.addColorStop(0.22, '#f2d998');
+      g.addColorStop(0.5, '#c9a24a');
+      g.addColorStop(0.72, '#8a641f');
+      g.addColorStop(1, '#f6e3b0');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
       const sheen = ctx.createLinearGradient(0, 0, w, h);
       sheen.addColorStop(0.05, 'rgba(255,255,255,0.55)');
       sheen.addColorStop(0.18, 'rgba(255,255,255,0)');
-      sheen.addColorStop(0.48, 'rgba(120,230,255,0.18)');
+      sheen.addColorStop(0.48, 'rgba(255,220,140,0.2)');
       sheen.addColorStop(0.56, 'rgba(255,255,255,0)');
-      sheen.addColorStop(0.8, 'rgba(196,170,255,0.28)');
+      sheen.addColorStop(0.8, 'rgba(240,200,110,0.3)');
       sheen.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = sheen;
       ctx.fillRect(0, 0, w, h);
@@ -537,12 +672,12 @@
   function makeEnvironmentTexture() {
     return canvasTexture(1024, 512, (ctx, w, h) => {
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, '#010307');
-      g.addColorStop(0.3, '#071426');
-      g.addColorStop(0.48, '#16334d');
-      g.addColorStop(0.52, '#0a1b29');
-      g.addColorStop(0.75, '#040a11');
-      g.addColorStop(1, '#010204');
+      g.addColorStop(0, '#020201');
+      g.addColorStop(0.3, '#1d1408');
+      g.addColorStop(0.48, '#4a3512');
+      g.addColorStop(0.52, '#2a1d0b');
+      g.addColorStop(0.75, '#0d0904');
+      g.addColorStop(1, '#010101');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
@@ -558,22 +693,24 @@
         ctx.fill();
         ctx.globalAlpha = 1;
       };
-      softbox(210, 155, 150, 90, '#dceaff', 0.95);
-      softbox(760, 130, 120, 70, '#b8d8ff', 0.82);
-      softbox(80, 300, 100, 55, '#37d9ff', 0.36);
-      softbox(920, 300, 130, 70, '#8f7bff', 0.34);
+      softbox(210, 155, 150, 90, '#fff3d2', 0.95);
+      softbox(760, 130, 120, 70, '#ffe0a0', 0.82);
+      softbox(80, 300, 100, 55, '#d4af37', 0.36);
+      softbox(920, 300, 130, 70, '#b5892f', 0.34);
       softbox(520, 80, 240, 50, '#ffffff', 0.55);
+      softbox(520, 142, 44, 210, '#fff2ce', 0.76);
+      softbox(315, 250, 58, 26, '#ffd89a', 0.42);
       ctx.globalAlpha = 0.16;
-      ctx.fillStyle = '#78e8ff';
+      ctx.fillStyle = '#e8c76f';
       ctx.fillRect(0, 356, w, 2);
-      ctx.fillStyle = '#9b87ff';
+      ctx.fillStyle = '#b5892f';
       ctx.fillRect(0, 388, w, 2);
       ctx.globalAlpha = 1;
       // Subtle star points.
       for (let i = 0; i < 90; i += 1) {
         const x = Math.random() * w;
         const y = Math.random() * 260;
-        ctx.fillStyle = `rgba(180,225,255,${0.08 + Math.random() * 0.25})`;
+        ctx.fillStyle = `rgba(255,225,160,${0.08 + Math.random() * 0.25})`;
         ctx.fillRect(x, y, 1.4, 1.4);
       }
     });
@@ -581,6 +718,9 @@
 
   CAM.textures = {
     grain: makeGrainTexture(),
+    shellColor: makeShellColorTexture(),
+    shellRough: makeShellRoughTexture(),
+    shellNormal: makeShellNormalTexture(),
     brushed: makeBrushedTexture(),
     rubber: makeRubberTexture(),
     pcb: makePcbTexture(),
@@ -604,15 +744,16 @@
 
     const mats = {
       shell: physical({
-        color: 0x0d1116,
-        roughness: 0.78,
-        metalness: 0.1,
-        clearcoat: 0.22,
-        clearcoatRoughness: 0.6,
-        roughnessMap: T.grain,
-        bumpMap: T.grain,
-        bumpScale: 0.012,
-        envMapIntensity: 0.75
+        color: 0xffffff,
+        map: T.shellColor,
+        roughness: 0.52,
+        metalness: 0.18,
+        clearcoat: 0.42,
+        clearcoatRoughness: 0.22,
+        roughnessMap: T.shellRough,
+        normalMap: T.shellNormal,
+        normalScale: new THREE.Vector2(0.16, 0.16),
+        envMapIntensity: 1.0
       }),
       rubber: standard({
         color: 0x0b0e11,
@@ -631,7 +772,7 @@
         bumpScale: 0.008,
         clearcoat: 0.15,
         clearcoatRoughness: 0.5,
-        envMapIntensity: 1.25
+        envMapIntensity: 1.0
       }),
       steel: physical({
         color: 0xd3dbe4,
@@ -650,7 +791,7 @@
         envMapIntensity: 1.1
       }),
       optical: physical({
-        color: 0x9a9dff,
+        color: 0xe6cf95,
         metalness: 0.12,
         roughness: 0.035,
         transmission: 0.68,
@@ -665,13 +806,13 @@
         clearcoatRoughness: 0.04,
         side: THREE.DoubleSide,
         envMapIntensity: 2.4,
-        attenuationColor: new THREE.Color(0x5b62d8),
+        attenuationColor: new THREE.Color(0x8a6a2a),
         attenuationDistance: 2.6
       }),
       mirror: physical({
-        color: 0x7f8cff,
+        color: 0xf2dfae,
         map: T.mirror,
-        emissive: 0x3b4ac8,
+        emissive: 0x4a3812,
         emissiveIntensity: 1.05,
         metalness: 0.45,
         roughness: 0.08,
@@ -713,7 +854,7 @@
       cmos: physical({
         color: 0xffffff,
         map: T.sensor,
-        emissive: 0x18205a,
+        emissive: 0x3a2a08,
         emissiveIntensity: 0.42,
         metalness: 0.45,
         roughness: 0.18,
@@ -722,7 +863,7 @@
         envMapIntensity: 1.8
       }),
       glass: physical({
-        color: 0xbfe4ff,
+        color: 0xf6e6bd,
         metalness: 0.04,
         roughness: 0.04,
         transmission: 0.84,
@@ -1209,6 +1350,8 @@
     addMesh(part, new THREE.RingGeometry(2.74, 3.28, 72), steel, [0.9, 0.25, 4.41], [0, 0, 0], { edges: false });
     addMesh(part, new THREE.RingGeometry(2.74, 3.28, 72), steel, [0.9, 0.25, 3.61], [0, 0, 0], { edges: false });
     addMesh(part, new THREE.TorusGeometry(3.28, 0.045, 10, 80), steel, [0.9, 0.25, 4.4], [0, 0, 0], { edges: false });
+    addMesh(part, new THREE.TorusGeometry(3.34, 0.026, 10, 96), gold, [0.9, 0.25, 4.43], [0, 0, 0], { edges: false });
+    addMesh(part, new THREE.RingGeometry(3.2, 3.26, 72), gold, [0.9, 0.25, 4.445], [0, 0, 0], { edges: false });
     addMesh(part, new THREE.TorusGeometry(3.28, 0.035, 8, 80), dark, [0.9, 0.25, 3.62], [0, 0, 0], { edges: false });
 
     // Three stainless bayonet claws.
@@ -1228,7 +1371,7 @@
     addMesh(part, roundedBoxGeometry(0.95, 0.4, 0.12, 0.05), dark, [1.75, -1.62, 4.36], [0, 0, 0], { edges: false });
 
     // Red alignment index.
-    const red = new THREE.MeshStandardMaterial({ color: 0xcf2f2f, roughness: 0.4, metalness: 0.3, emissive: 0x350404, emissiveIntensity: 0.5 });
+    const red = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.65, emissive: 0x3a2a08, emissiveIntensity: 0.5 });
     part.materials.push(red);
     addMesh(part, cylZ(0.075, 0.075, 0.035, 20), red, [0.9, 3.16, 4.45], [0, 0, 0], { edges: false, cast: false });
 
@@ -1243,7 +1386,7 @@
 
     // Engraved EF mark.
     addTextPlane(part, 'EF', 0.72, 0.26, [0.9, 3.02, 3.64], [0, 0, 0], {
-      color: '#cfd9e4', size: 96, width: 256, height: 96, opacity: 0.8
+      color: '#e8c76f', size: 96, width: 256, height: 96, opacity: 0.9
     });
   }
 
@@ -1251,9 +1394,10 @@
     const shell = materialFor(part, 'shell');
     const dark = materialFor(part, 'darkSteel');
     const steel = materialFor(part, 'steel');
+    const gold = materialFor(part, 'copper');
 
     addPanelXY(part, 14.2, 10.9, 1.15, [{ type: 'circle', cx: 0.9, cy: 0.25, r: 3.17 }], 0.94, [0, 0, 3.1], shell, {
-      bevel: 0.07,
+      bevel: 0.11,
       edges: true,
       receive: true
     });
@@ -1265,8 +1409,8 @@
     });
 
     // Side skins close the body between the front and rear shells.
-    addMesh(part, roundedBoxGeometry(0.3, 9.35, 5.75, 0.15), shell, [-7.02, 0, 0.12], [0, 0, 0], { edges: true });
-    addMesh(part, roundedBoxGeometry(0.3, 9.35, 5.75, 0.15), shell, [7.02, 0, 0.12], [0, 0, 0], { edges: true });
+    addMesh(part, roundedBoxGeometry(0.3, 9.35, 5.75, 0.22), shell, [-7.02, 0, 0.12], [0, 0, 0], { edges: true });
+    addMesh(part, roundedBoxGeometry(0.3, 9.35, 5.75, 0.22), shell, [7.02, 0, 0.12], [0, 0, 0], { edges: true });
     addMesh(part, roundedBoxGeometry(0.34, 9.55, 0.34, 0.12), shell, [-7.02, 0, -2.72], [0, 0, 0], { edges: false });
     addMesh(part, roundedBoxGeometry(0.34, 9.55, 0.34, 0.12), shell, [7.02, 0, -2.72], [0, 0, 0], { edges: false });
     // Interior side shields block stray PCB light from leaking through the grip seams.
@@ -1274,6 +1418,7 @@
     addMesh(part, roundedBoxGeometry(0.14, 10.0, 5.95, 0.05), dark, [6.55, 0, 0.12], [0, 0, 0], { edges: false });
 
     addMesh(part, new THREE.TorusGeometry(3.34, 0.11, 12, 80), shell, [0.9, 0.25, 3.56], [0, 0, 0], { edges: false });
+    addMesh(part, new THREE.TorusGeometry(3.46, 0.022, 8, 96), gold, [0.9, 0.25, 3.6], [0, 0, 0], { edges: false });
     addMesh(part, new THREE.TorusGeometry(3.2, 0.05, 8, 72), dark, [0.9, 0.25, 3.57], [0, 0, 0], { edges: false });
 
     // Lens release.
@@ -1289,7 +1434,7 @@
 
     // Badges.
     addTextPlane(part, 'CANON', 3.0, 0.62, [-3.1, 4.05, 3.66], [0, 0, 0], {
-      color: '#e2eaf3', size: 92, width: 512, height: 116, opacity: 0.92
+      color: '#f0ce6e', size: 92, width: 512, height: 116, opacity: 0.92
     });
     addTextPlane(part, 'EOS 6D', 2.1, 0.56, [1.65, -4.2, 3.66], [0, 0, 0], {
       color: '#d6b35d', size: 72, width: 384, height: 112, opacity: 0.95
@@ -1320,7 +1465,7 @@
     addPanelXY(part, 14.2, 10.9, 1.15, [
       { type: 'rect', cx: 0.45, cy: -0.45, w: 6.0, h: 4.35, r: 0.12 },
       { type: 'rect', cx: 0.9, cy: 3.62, w: 1.7, h: 1.1, r: 0.12 }
-    ], 0.88, [0, 0, -3.12], shell, { bevel: 0.07, edges: true });
+    ], 0.88, [0, 0, -3.12], shell, { bevel: 0.1, edges: true });
 
     // LCD bezel and panel.
     addMesh(part, roundedBoxGeometry(6.3, 4.6, 0.24, 0.18), dark, [0.45, -0.45, -3.6], [0, 0, 0], { edges: false });
@@ -1397,8 +1542,9 @@
     const dark = materialFor(part, 'darkSteel');
     const steel = materialFor(part, 'steel');
     const rubber = materialFor(part, 'rubber');
+    const gold = materialFor(part, 'copper');
 
-    addMesh(part, roundedBoxGeometry(14.0, 0.42, 6.35, 0.2), shell, [0.6, 5.26, -0.12], [0, 0, 0], { edges: true });
+    addMesh(part, roundedBoxGeometry(14.0, 0.42, 6.35, 0.26), shell, [0.6, 5.26, -0.12], [0, 0, 0], { edges: true });
 
     const cy = 5.95;
     const cz = -0.2;
@@ -1406,7 +1552,7 @@
       [-3.0, 5.08], [2.5, 5.08], [2.42, 5.62], [1.02, 6.62],
       [-0.9, 6.98], [-2.7, 6.55], [-3.14, 5.84]
     ].map(([z, y]) => [z - cz, y - cy]);
-    const humpGeo = profileExtrudeZY(profile, 5.9, 0.12);
+    const humpGeo = profileExtrudeZY(profile, 5.9, 0.16);
     addMesh(part, humpGeo, shell, [0.9, cy, cz], [0, 0, 0], { edges: true });
 
     // A thin gasket line where the top cover meets the chassis.
@@ -1414,6 +1560,7 @@
 
     // Mode dial.
     addMesh(part, cylY(0.74, 0.74, 0.24, 40), dark, [6.0, 5.54, -0.55], [0, 0, 0], { edges: false });
+    addMesh(part, new THREE.TorusGeometry(0.76, 0.022, 8, 48), gold, [6.0, 5.67, -0.55], [-Math.PI / 2, 0, 0], { edges: false });
     addKnurl(part, [6.0, 5.59, -0.55], new THREE.Vector3(0, 1, 0), 0.73, 0.2, 40, 'darkSteel', 0.055);
     const dialMat = new THREE.MeshStandardMaterial({ map: CAM.textures.dial, roughness: 0.5, metalness: 0.2 });
     part.materials.push(dialMat);
@@ -1421,11 +1568,12 @@
 
     // Main command dial.
     addMesh(part, cylY(0.56, 0.56, 0.2, 32), dark, [4.65, 5.5, 1.92], [0, 0, 0], { edges: false });
+    addMesh(part, new THREE.TorusGeometry(0.58, 0.018, 8, 42), gold, [4.65, 5.61, 1.92], [-Math.PI / 2, 0, 0], { edges: false });
     addKnurl(part, [4.65, 5.54, 1.92], new THREE.Vector3(0, 1, 0), 0.55, 0.17, 28, 'steel', 0.045);
 
     // Shutter release and power collar.
     addMesh(part, cylY(0.38, 0.38, 0.06, 28), dark, [4.02, 5.49, 1.17], [0, 0, 0], { edges: false });
-    addMesh(part, new THREE.TorusGeometry(0.31, 0.055, 10, 28), steel, [4.02, 5.53, 1.17], [-Math.PI / 2, 0, 0], { edges: false });
+    addMesh(part, new THREE.TorusGeometry(0.31, 0.055, 10, 28), gold, [4.02, 5.53, 1.17], [-Math.PI / 2, 0, 0], { edges: false });
     addMesh(part, cylY(0.28, 0.28, 0.14, 26), rubber, [4.02, 5.57, 1.17], [0, 0, 0], { edges: false });
 
     // Top monochrome LCD.
@@ -1464,16 +1612,61 @@
     }
 
     addTextPlane(part, 'EOS 6D', 1.22, 0.3, [0.9, 5.48, 2.6], [0, 0, 0], {
-      color: '#c6d0dc', size: 70, width: 320, height: 80, opacity: 0.9
+      color: '#e8c76f', size: 70, width: 320, height: 80, opacity: 0.9
     });
     addTextPlane(part, 'CANON', 1.25, 0.24, [0.9, 5.24, 2.6], [0, 0, 0], {
-      color: '#8e9baa', size: 60, width: 320, height: 64, opacity: 0.8
+      color: '#c9a24a', size: 60, width: 320, height: 64, opacity: 0.8
     });
 
     // Fastener holes.
     [[-5.75, 5.46, 2.2], [5.75, 5.46, 2.2], [-5.75, 5.46, -2.1], [5.75, 5.46, -2.1]].forEach(([x, y, z]) => {
       addMesh(part, cylY(0.135, 0.135, 0.03, 16), dark, [x, y, z], [0, 0, 0], { edges: false, cast: false });
     });
+
+    // Concept pop-up flash module (the original EOS 6D has no built-in flash;
+    // this optional module is added for the interactive lab's flash control).
+    const flashGroup = new THREE.Group();
+    const flashWorld = [0.9, 6.58, -1.28];
+    flashGroup.position.set(
+      flashWorld[0] - part.center.x,
+      flashWorld[1] - part.center.y,
+      flashWorld[2] - part.center.z
+    );
+    part.inner.add(flashGroup);
+    const flashGlass = new THREE.MeshStandardMaterial({
+      color: 0xffe7b3,
+      emissive: 0xffb43c,
+      emissiveIntensity: 0.22,
+      roughness: 0.12,
+      metalness: 0.15
+    });
+    part.materials.push(flashGlass);
+    const addFlashMesh = (geo, mat, offset, options = {}) => {
+      const mesh = addMesh(
+        part,
+        geo,
+        mat,
+        [part.center.x + offset[0], part.center.y + offset[1], part.center.z + offset[2]],
+        options.rotation || [0, 0, 0],
+        { holder: flashGroup, edges: options.edges, cast: options.cast }
+      );
+      return mesh;
+    };
+    addFlashMesh(roundedBoxGeometry(2.45, 0.55, 0.82, 0.12), shell, [0, 0, 0], { edges: true });
+    addFlashMesh(roundedBoxGeometry(2.16, 0.34, 0.06, 0.04), flashGlass, [0, 0, 0.43], { edges: false });
+    addFlashMesh(new THREE.BoxGeometry(2.55, 0.055, 0.9), gold, [0, 0.3, 0], { edges: false });
+    addFlashMesh(new THREE.BoxGeometry(2.34, 0.05, 0.12), gold, [0, -0.3, 0.38], { edges: false });
+    addFlashMesh(roundedBoxGeometry(0.42, 0.18, 0.6, 0.05), gold, [-1.18, -0.15, -0.05], { edges: false });
+    addFlashMesh(roundedBoxGeometry(0.42, 0.18, 0.6, 0.05), gold, [1.18, -0.15, -0.05], { edges: false });
+    addFlashMesh(new THREE.BoxGeometry(2.5, 0.05, 0.05), gold, [0, 0.29, -0.42], { edges: false });
+    flashGroup.visible = false;
+    part.flash = {
+      group: flashGroup,
+      baseY: flashGroup.position.y,
+      upY: flashGroup.position.y + 0.92,
+      glassMat: flashGlass,
+      shellMat: shell
+    };
   }
 
   function buildBottomShell(part) {
@@ -2085,7 +2278,7 @@
     rig.name = 'DISPLAY_RIG';
 
     const deckMat = new THREE.MeshPhysicalMaterial({
-      color: 0x050a12,
+      color: 0x0a0703,
       metalness: 0.86,
       roughness: 0.24,
       transparent: true,
@@ -2099,22 +2292,64 @@
     deck.receiveShadow = true;
     rig.add(deck);
 
+    // Soft contact shadow grounds the floating camera and adds depth.
+    const shadowTexture = canvasTexture(512, 512, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 8, w / 2, h / 2, w * 0.48);
+      g.addColorStop(0, 'rgba(0,0,0,0.82)');
+      g.addColorStop(0.42, 'rgba(0,0,0,0.46)');
+      g.addColorStop(0.78, 'rgba(0,0,0,0.12)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    });
+    const contact = new THREE.Mesh(
+      new THREE.PlaneGeometry(14, 10),
+      new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, opacity: 0.75, depthWrite: false })
+    );
+    contact.rotation.x = -Math.PI / 2;
+    contact.position.set(0, 0.015, 0.2);
+    contact.renderOrder = 2;
+    rig.add(contact);
+
+    // Warm volumetric halo behind the model.
+    const auraTexture = canvasTexture(512, 512, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2);
+      g.addColorStop(0, 'rgba(255,224,160,0.52)');
+      g.addColorStop(0.22, 'rgba(212,175,55,0.24)');
+      g.addColorStop(0.55, 'rgba(154,116,34,0.08)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    });
+    const aura = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: auraTexture,
+      color: 0xffd37a,
+      transparent: true,
+      opacity: 0.34,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: true
+    }));
+    aura.position.set(0, 8.5, -9.5);
+    aura.scale.set(28, 19, 1);
+    rig.add(aura);
+
     const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x49dfff,
+      color: 0xd4af37,
       transparent: true,
       opacity: 0.75,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
     const violetMat = new THREE.MeshBasicMaterial({
-      color: 0x927dff,
+      color: 0xb5892f,
       transparent: true,
       opacity: 0.5,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
     const dimMat = new THREE.MeshBasicMaterial({
-      color: 0x2f8eb3,
+      color: 0x6b4f18,
       transparent: true,
       opacity: 0.28,
       blending: THREE.AdditiveBlending,
@@ -2139,7 +2374,7 @@
     const arc = new THREE.Mesh(
       new THREE.RingGeometry(10.6, 10.78, 160, 1, 0.4, 1.9),
       new THREE.MeshBasicMaterial({
-        color: 0x62e9ff,
+        color: 0xf0ce6e,
         transparent: true,
         opacity: 0.8,
         side: THREE.DoubleSide,
@@ -2154,7 +2389,7 @@
     const arc2 = new THREE.Mesh(
       new THREE.RingGeometry(11.5, 11.56, 160, 1, 2.8, 0.65),
       new THREE.MeshBasicMaterial({
-        color: 0xa38cff,
+        color: 0xb5892f,
         transparent: true,
         opacity: 0.65,
         side: THREE.DoubleSide,
@@ -2168,7 +2403,7 @@
 
     // Tick marks around the rim.
     const tickGroup = new THREE.Group();
-    for (let i = 0; i < 120; i += 1) {
+    for (let i = 0; i < 70; i += 1) {
       const a = (i / 120) * TAU;
       const h = i % 5 === 0 ? 0.26 : 0.12;
       const tick = new THREE.Mesh(
@@ -2193,7 +2428,7 @@
 
     // Vertical holo pillars.
     const pillarMat = new THREE.MeshBasicMaterial({
-      color: 0x3cc9ef,
+      color: 0xb5892f,
       transparent: true,
       opacity: 0.16,
       blending: THREE.AdditiveBlending,
@@ -2207,18 +2442,12 @@
       rig.add(p);
     }
 
-    // Ground grid.
-    const grid = new THREE.GridHelper(34, 34, 0x2d7f9f, 0x113344);
-    grid.position.y = 0.005;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.22;
-    grid.material.depthWrite = false;
-    rig.add(grid);
+    // Concentric rings and radial ticks only: no square coordinate grid.
 
     // Scanning ring for the model (kept outside the rig so it can travel up).
     const scanGroup = new THREE.Group();
     const scanMat = new THREE.MeshBasicMaterial({
-      color: 0x55e6ff,
+      color: 0xf0ce6e,
       transparent: true,
       opacity: 0.55,
       blending: THREE.AdditiveBlending,
@@ -2230,7 +2459,7 @@
     const scanDisc = new THREE.Mesh(
       new THREE.CircleGeometry(8.0, 96),
       new THREE.MeshBasicMaterial({
-        color: 0x2fd7ff,
+        color: 0xd4af37,
         transparent: true,
         opacity: 0.025,
         side: THREE.DoubleSide,
@@ -2258,7 +2487,7 @@
     const particleGeo = new THREE.BufferGeometry();
     particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const particleMat = new THREE.PointsMaterial({
-      color: 0x77e6ff,
+      color: 0xffd37a,
       size: 0.055,
       transparent: true,
       opacity: 0.62,
@@ -2281,7 +2510,7 @@
     const violetGeo = new THREE.BufferGeometry();
     violetGeo.setAttribute('position', new THREE.BufferAttribute(vPositions, 3));
     const violetParticles = new THREE.Points(violetGeo, new THREE.PointsMaterial({
-      color: 0xa08cff,
+      color: 0xc9a24a,
       size: 0.075,
       transparent: true,
       opacity: 0.35,
@@ -2302,6 +2531,8 @@
       scanDisc,
       particles,
       violetParticles,
+      aura,
+      contact,
       particleData: { positions, speeds, seeds, count: particleCount },
       materials: { ringMat, violetMat, dimMat, scanMat, particleMat }
     };
@@ -2334,6 +2565,23 @@
     addEdges
   };
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

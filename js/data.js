@@ -13,7 +13,7 @@
       no: 'A',
       name: '镜头卡口',
       en: 'LENS MOUNT',
-      color: '#d9e1ea',
+      color: '#e8c76f',
       desc: '最先卸下的外部光学接口'
     },
     {
@@ -21,7 +21,7 @@
       no: 'B',
       name: '外部机壳',
       en: 'EXTERIOR SHELL',
-      color: '#93a3b5',
+      color: '#c9a24a',
       desc: '前后、顶部、底部外壳与手柄'
     },
     {
@@ -29,7 +29,7 @@
       no: 'C',
       name: '内部骨架',
       en: 'MAGNESIUM FRAME',
-      color: '#c8d3df',
+      color: '#ded2bb',
       desc: '承托光学与电子模块的镁合金框架'
     },
     {
@@ -37,7 +37,7 @@
       no: 'D',
       name: '光学反射系统',
       en: 'OPTICAL REFLEX',
-      color: '#9c8cff',
+      color: '#e8c76f',
       desc: '反光镜、对焦屏与五棱镜'
     },
     {
@@ -45,7 +45,7 @@
       no: 'E',
       name: '快门机构',
       en: 'SHUTTER UNIT',
-      color: '#8d9caf',
+      color: '#b5892f',
       desc: '焦平面帘幕、驱动马达与齿轮组'
     },
     {
@@ -53,7 +53,7 @@
       no: 'F',
       name: '电子组件',
       en: 'ELECTRONICS',
-      color: '#3ddbb0',
+      color: '#c9a24a',
       desc: 'CMOS 感光组件与主电路板'
     },
     {
@@ -61,7 +61,7 @@
       no: 'G',
       name: '紧固件',
       en: 'FASTENERS',
-      color: '#c2ccd8',
+      color: '#f0ce6e',
       desc: '不锈钢螺钉与接地紧固件'
     }
   ];
@@ -115,8 +115,8 @@
     optical: {
       name: '蓝紫镀膜光学玻璃',
       en: 'MULTI-COATED OPTICAL GLASS',
-      swatch: '#8f8cff',
-      sheen: 'linear-gradient(135deg,#d9d4ff 0%,#6f67e8 32%,#3ec9ff 68%,#a79bff 100%)',
+      swatch: '#e8c76f',
+      sheen: 'linear-gradient(135deg,#fff3cc 0%,#d4af37 36%,#8a641f 68%,#f0ce6e 100%)',
       metalness: 0.15,
       roughness: 0.04,
       note: '多层增透/反射镀膜，在斜射光下呈现蓝紫与青色干涉色。'
@@ -124,8 +124,8 @@
     mirror: {
       name: '镀银反光镜面',
       en: 'SILVERED MIRROR COATING',
-      swatch: '#cfd8ff',
-      sheen: 'linear-gradient(135deg,#ffffff 0%,#9fb7ff 35%,#6f63d9 70%,#d9e6ff 100%)',
+      swatch: '#f0d898',
+      sheen: 'linear-gradient(135deg,#fff8e0 0%,#e8c76f 38%,#8a641f 72%,#f6e3b0 100%)',
       metalness: 1.0,
       roughness: 0.03,
       note: '45° 快速回位主反光镜，表面镀银并覆蓝紫增反膜。'
@@ -178,8 +178,8 @@
     glass: {
       name: '光学取景玻璃',
       en: 'VIEWFINDER GLASS',
-      swatch: '#9fd8ff',
-      sheen: 'linear-gradient(135deg,#e6fbff 0%,#5fb6e8 45%,#b9ecff 100%)',
+      swatch: '#f2e2b8',
+      sheen: 'linear-gradient(135deg,#fff8e0 0%,#d4af37 52%,#f6e3b0 100%)',
       metalness: 0.05,
       roughness: 0.05,
       note: '取景器目镜与对焦屏基材，低色散玻璃并做边缘消光。'
@@ -569,5 +569,6 @@
     MODEL: 'Canon EOS 6D (2012)'
   };
 })();
+
 
 
